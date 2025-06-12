@@ -32,7 +32,6 @@ services:
       retries: 10
     networks:
       - n8n-network
-      - shark
 
   n8n:
     build:
@@ -77,7 +76,7 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-      - shark
+
     healthcheck:
       test: ['CMD', 'node', '-v']
       interval: 5s
@@ -123,7 +122,7 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-      - shark
+
 
   n8n-worker:
     build:
@@ -167,7 +166,7 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-      - shark
+
     healthcheck:
       test: ['CMD', 'node','-v']
       interval: 5s
@@ -192,47 +191,6 @@ services:
       - QUEUE_NAME=${QUEUE_NAME}
       - POLL_INTERVAL_SECONDS=${POLL_INTERVAL_SECONDS}
 
-  n8n-autoscaler:
-    build:
-      context: .
-      dockerfile: autoscaler/Dockerfile
-      args:
-        - REDIS_HOST=${REDIS_HOST}
-        - REDIS_PORT=${REDIS_PORT}
-        - QUEUE_NAME_PREFIX=${QUEUE_NAME_PREFIX}
-        - QUEUE_NAME=${QUEUE_NAME}
-        - N8N_WORKER_SERVICE_NAME=${N8N_WORKER_SERVICE_NAME}
-        - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-    env_file: .env
-    restart: unless-stopped
-    environment:
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
-      # - REDIS_PASSWORD=your_redis_password # Add if you set one for Redis
-      - QUEUE_NAME_PREFIX=${QUEUE_NAME_PREFIX}
-      - QUEUE_NAME=${QUEUE_NAME}
-      - N8N_WORKER_SERVICE_NAME=${N8N_WORKER_SERVICE_NAME} # Service name in this docker-compose file
-      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME} # Crucial: Should match your project name
-      - COMPOSE_FILE_PATH=/app/docker-compose.yml # Path to compose file in mounted project
-      - MIN_REPLICAS=${MIN_REPLICAS}
-      - MAX_REPLICAS=${MAX_REPLICAS}                 # Adjust as needed
-      - SCALE_UP_QUEUE_THRESHOLD=${SCALE_UP_QUEUE_THRESHOLD}    # Scale up if queue length > 5
-      - SCALE_DOWN_QUEUE_THRESHOLD=${SCALE_DOWN_QUEUE_THRESHOLD}   # Scale down if queue length < 2
-      - POLLING_INTERVAL_SECONDS=${POLLING_INTERVAL_SECONDS}    # Check every 30 seconds
-      - COOLDOWN_PERIOD_SECONDS=${COOLDOWN_PERIOD_SECONDS}    # Wait 3 minutes after a scaling action
-      - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./.env:/app/.env
-    depends_on:
-      redis:
-        condition: service_healthy
-      n8n-worker: # Ensure worker service is defined, though it might start with 0 replicas if autoscaled from 0
-        condition: service_started # or service_healthy if you have a healthcheck that passes with 0 initial replicas
-    networks:
-      - n8n-network
-
 volumes:
   postgres_data:
   redis_data:
@@ -242,5 +200,3 @@ volumes:
 networks:
   n8n-network:
     driver: bridge
-  shark:
-    external: true
